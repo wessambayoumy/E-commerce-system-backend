@@ -1,0 +1,5 @@
+{
+  "snyk.advanced.autoSelectOrganization": true,
+  "scm.compactFolders": false,
+  "explorer.compactFolders": false
+}
