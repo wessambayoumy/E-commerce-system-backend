@@ -9,7 +9,8 @@ import {
   MinLength,
 } from 'class-validator';
 import { GenderEnum, RoleEnum } from '@common/enums/user';
-export class CreateUserDto {
+import { IUser } from '@common/interfaces';
+export class CreateUserDto implements Partial<IUser> {
   @IsString()
   @MinLength(3)
   @MaxLength(20)
@@ -24,5 +25,9 @@ export class CreateUserDto {
   @IsEnum(GenderEnum)
   gender!: GenderEnum;
   @IsDateString()
-  birthDate!: Date;
+  dateOfBirth!: Date;
+  @IsOptional()
+  phoneNumber?: string;
+  @IsOptional()
+  profilePicture?: string;
 }

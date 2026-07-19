@@ -6,43 +6,32 @@ import {
   Param,
   Patch,
   Post,
-  Res,
-  ValidationPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import type { FastifyReply } from 'fastify';
 import { CreateUserDto } from './dto';
 
 @Controller('/user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get()
-  getAllUsers(@Res() res: FastifyReply) {
-    const data = this.userService.getAllUsers();
-    return res.send(data);
+  @Get('/get-all-users')
+  getAllUsers() {
+    return this.userService.getAllUsers();
   }
-  @Get('/:user-id')
-  getOneUser(@Res() res: FastifyReply, @Param() params: string) {
-    const data = this.userService.getOneUser(params);
-    return res.send(data);
+  @Get('/get-user/:user-id')
+  getOneUser(@Param() params: string) {
+    return this.userService.getOneUser(params);
   }
-  @Post()
-  createUser(
-    @Res() res: FastifyReply,
-    @Body(new ValidationPipe()) body: CreateUserDto,
-  ) {
-    const data = this.userService.createUser(body);
-    return res.send(data);
+  @Post('/create-user')
+  createUser(@Body() body: CreateUserDto) {
+    return this.userService.createUser(body);
   }
-  @Patch()
-  updateUser(@Res() res: FastifyReply) {
-    const data = this.userService.updateUser();
-    return res.send(data);
+  @Patch('/update-user/:user-id')
+  updateUser(@Param() params: string, @Body() body: any) {
+    return this.userService.updateUser(params, body);
   }
-  @Delete()
-  deleteUser(@Res() res: FastifyReply) {
-    const data = this.userService.deleteUser();
-    return res.send(data);
+  @Delete('/delete-user/:user-id')
+  deleteUser(@Param() params: string) {
+    return this.userService.deleteUser(params);
   }
 }
