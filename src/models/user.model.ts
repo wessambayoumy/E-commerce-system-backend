@@ -1,8 +1,19 @@
-import { SecurityModule, SecurityService } from '@common/modules/security';
+import {
+  EncryptionService,
+  HashService,
+  SecurityModule,
+} from '@common/services/security';
 import { MongooseModule, Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { IUser } from '@common/interfaces';
-import { GenderEnum, ProviderEnum, RoleEnum } from '@common/enums/user';
+import {
+  GenderEnum,
+  LangEnum,
+  ProviderEnum,
+  RoleEnum,
+} from '@common/enums/user';
 import { HydratedDocument } from 'mongoose';
+import { ConflictException } from '@nestjs/common';
+import { createSchema } from '@common/utils/schema';
 
 @Schema({
   timestamps: true,
@@ -54,42 +65,40 @@ export class User implements IUser {
     enum: Object.values(GenderEnum),
     default: GenderEnum.MALE,
   })
-  gender: GenderEnum = GenderEnum.MALE;
+  gender!: GenderEnum;
 
   @Prop({
     type: String,
     enum: Object.values(ProviderEnum),
     default: ProviderEnum.SYSTEM,
   })
-  provider: ProviderEnum = ProviderEnum.SYSTEM;
+  provider!: ProviderEnum;
 
   @Prop({
     type: String,
     enum: Object.values(RoleEnum),
     default: RoleEnum.USER,
   })
-  role: RoleEnum = RoleEnum.USER;
+  role!: RoleEnum;
+
+  @Prop({ type: String, enum: Object.values(LangEnum), default: LangEnum.EN })
+  lang!: LangEnum;
 
   @Prop({
     type: Date,
   })
   signOutAt!: Date;
-  @Prop({
-    type: Date,
-  })
-  createdAt!: Date;
-  @Prop({
-    type: Date,
-  })
-  updatedAt!: Date;
+
   @Prop({
     type: Date,
   })
   deletedAt!: Date;
+
   @Prop({
     type: Date,
   })
   restoredAt!: Date;
+
   @Prop({
     type: String,
   })
@@ -106,15 +115,24 @@ export const UserModel = MongooseModule.forFeatureAsync([
   {
     name: User.name,
     imports: [SecurityModule],
-    inject: [SecurityService],
-    useFactory: (SecurityService: SecurityService) => {
-      const schema = UserSchema;
+    inject: [HashService, EncryptionService],
+    useFactory: (
+      hashService: HashService,
+      encryptionService: EncryptionService,
+    ) => {
+      const schema = createSchema(User);
       schema.pre('save', async function (this: HydratedDocument<User>) {
         if (this.password && this.isModified('password'))
-          this.password = await SecurityService.hash(this.password);
+          this.password = await hashService.hash(this.password);
 
         if (this.phoneNumber && this.isModified('phoneNumber'))
-          this.phoneNumber = SecurityService.encrypt(this.phoneNumber);
+          this.phoneNumber = encryptionService.encrypt(this.phoneNumber);
+      });
+      schema.pre('validate', function () {
+        if (this.password && this.provider !== ProviderEnum.SYSTEM)
+          throw new ConflictException(
+            'Password should not be provided for non-system providers',
+          );
       });
       return schema;
     },
