@@ -2,15 +2,16 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from '@modules/user';
-import { AuthModule } from './modules/auth';
+import { AuthModule } from '@modules/auth';
 import { ProductModule } from '@modules/product';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
-import { envService } from '@config/env';
+import { ConfigModule } from '@nestjs/config';
+import { DbConnection } from '@/common/services/db';
+import { RateLimitModule } from '@/common/services/security';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
+    RateLimitModule,
     UserModule,
     ProductModule,
     AuthModule,
@@ -18,17 +19,8 @@ import { envService } from '@config/env';
       envFilePath: ['.env.dev', '.env.prod'],
       isGlobal: true,
     }),
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: () => ({
-        uri: envService.MONGO_URI,
-        onConnectionCreate: (connection: Connection) => {
-          connection.on('connected', () => console.log('mongodb connected'));
-          return connection;
-        },
-      }),
-      inject: [ConfigService],
-    }),
+    DbConnection,
+    EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService],

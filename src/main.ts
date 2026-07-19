@@ -4,16 +4,41 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import mongoose from 'mongoose';
-import { commonHooksPlugin } from '@common/utils';
-
+import helmet from '@fastify/helmet';
+import fastifyCsrf from '@fastify/csrf-protection';
+import { ValidationPipe } from '@nestjs/common';
+import { LangInterceptor, ResponseInterceptor } from '@common/interceptors';
+import fastifyMultipart from '@fastify/multipart';
+import { EnvService } from './config/index.js';
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),
   );
-  mongoose.plugin(commonHooksPlugin);
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  const envService = app.get(EnvService);
+
+  app.enableCors({ origin: envService.corsOrigins });
+  await app.register(fastifyMultipart, {
+    limits: {
+      fileSize: envService.multerLimitFileSize,
+      files: 5,
+    },
+  });
+  await app.register(helmet);
+  await app.register(fastifyCsrf);
+
+  app.setGlobalPrefix('api');
+  app.enableVersioning();
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  app.useGlobalInterceptors(new LangInterceptor(), new ResponseInterceptor());
+
+  await app.listen(envService.port ?? 3000, '0.0.0.0');
 }
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 bootstrap();
